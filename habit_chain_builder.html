@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>習慣鎖鍊建立</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chosen Palette: Warm Neutrals with a Vibrant Teal Accent -->
+    <!-- Application Structure Plan: The application is structured as an interactive, step-by-step workshop. It begins with an introduction to the problem (the 'why'), then guides the user through the three core steps of the Habit Chain method using interactive elements. Step 1 allows users to input their desired habits. Step 2 lets them select their existing daily anchors. The core of the app is Step 3, a drag-and-drop interface where users physically create their 'chains'. This is followed by a section on pro-tips and a final summary. This "workshop" model was chosen over a static presentation because it turns passive learning into active application, making the concept more tangible and memorable for the target high school audience. The user creates a personalized plan by the end, increasing the likelihood of real-world application. -->
+    <!-- Visualization & Content Choices: Report Info: 3-step process for habit building. -> Goal: Guide the user to apply the process to their own life. -> Viz/Presentation Method: An interactive multi-step form culminating in a drag-and-drop "chain builder". -> Interaction: Users type their habits, select anchor points, and drag desired habits onto anchors to form a visual chain. This interactive diagram serves as the primary visualization. -> Justification: For a process-oriented report without quantitative data, a traditional chart is ineffective. A hands-on builder is a far superior way to "visualize" the method's core concept of linking actions together. It's more engaging and directly serves the report's educational purpose. -> Library/Method: Vanilla JavaScript for DOM manipulation and HTML Drag and Drop API. CONFIRMING NO Chart.js/Plotly needed. -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap');
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            background-color: #fdfaf6;
+            color: #4a4a4a;
+        }
+        .habit-card {
+            cursor: grab;
+            transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+        }
+        .habit-card:active {
+            cursor: grabbing;
+            transform: scale(1.05);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+        .drop-zone {
+            transition: background-color 0.2s ease, border-color 0.2s ease;
+            border-style: dashed;
+        }
+        .drop-zone.drag-over {
+            background-color: #e0f2f1;
+            border-color: #00796b;
+        }
+        .step-number {
+            background-color: #00796b;
+            color: white;
+            border-radius: 9999px;
+            width: 3rem;
+            height: 3rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 1.5rem;
+            line-height: 1;
+        }
+        .btn-teal {
+            background-color: #00796b;
+            color: white;
+            transition: background-color 0.3s;
+        }
+        .btn-teal:hover {
+            background-color: #004d40;
+        }
+        .btn-outline {
+            border-color: #00796b;
+            color: #00796b;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        .btn-outline:hover {
+            background-color: #e0f2f1;
+        }
+    </style>
+</head>
+<body class="antialiased">
+    <div class="container mx-auto p-4 md:p-8 max-w-5xl">
+        
+        <header class="text-center mb-12">
+            <h1 class="text-4xl md:text-5xl font-bold text-teal-800 mb-2">習慣鎖鍊建立工作坊 ⛓️</h1>
+            <p class="text-lg md:text-xl text-gray-600">只需要三個步驟，設計你的新習慣，告別無意識滑手機！</p>
+        </header>
+
+        <main class="space-y-16">
+            
+            <section id="why" class="text-center bg-white p-8 rounded-xl shadow-md">
+                <h2 class="text-2xl font-bold mb-4 text-teal-700">為什麼我們需要這個方法？</h2>
+                <div class="max-w-2xl mx-auto">
+                    <p class="text-lg mb-4">現代人的大腦預設就是：<span class="font-bold text-red-500 p-1 bg-red-100 rounded">「有空檔 = 滑手機」</span>。</p>
+                    <p class="text-gray-700">我們總是「想做」很多事，但一有空就自動拿起手機，寶貴的時間就這樣被吸走了。這個頁面的目標，就是要幫助你<span class="font-bold text-teal-600">主動設計下一步動作</span>，用真正想做的好習慣，取代滑手機的空檔！</p>
+                </div>
+            </section>
+
+            <section id="step1" class="bg-white p-8 rounded-xl shadow-md">
+                <div class="flex items-center gap-4 mb-6">
+                    <div class="step-number">1</div>
+                    <h2 class="text-2xl font-bold text-teal-700">列出你想培養的「B」習慣</h2>
+                </div>
+                <p class="mb-4 text-gray-700">首先，把所有「想做但一直沒做」的學習或生活習慣通通寫下來。這個階段請不要篩選，想到什麼就寫什麼，讓模糊的想法變成具體的選項。</p>
+                <div class="flex flex-col sm:flex-row gap-2 mb-4">
+                    <input type="text" id="new-habit-input" placeholder="例如：背 10 個英文單字" class="flex-grow p-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 outline-none transition">
+                    <button id="add-habit-btn" class="btn-teal font-bold py-3 px-6 rounded-lg">加入清單</button>
+                </div>
+                <div class="mb-4">
+                    <p class="text-sm text-gray-600 mb-2">或點擊範例快速加入：</p>
+                    <div id="example-habits" class="flex flex-wrap gap-2">
+                         <button class="btn-outline text-sm py-1 px-3 rounded-full border-2">閱讀 3 頁書</button>
+                         <button class="btn-outline text-sm py-1 px-3 rounded-full border-2">聽 10 分鐘 Podcast</button>
+                         <button class="btn-outline text-sm py-1 px-3 rounded-full border-2">寫 3 行日記</button>
+                         <button class="btn-outline text-sm py-1 px-3 rounded-full border-2">喝一杯水</button>
+                    </div>
+                </div>
+                <div id="b-list" class="mt-4 p-4 bg-gray-50 rounded-lg min-h-[100px] grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                </div>
+            </section>
+
+            <section id="step2" class="bg-white p-8 rounded-xl shadow-md">
+                <div class="flex items-center gap-4 mb-6">
+                    <div class="step-number">2</div>
+                    <h2 class="text-2xl font-bold text-teal-700">找出你最穩固的「A」錨點 (可自訂)</h2>
+                </div>
+                <p class="mb-6 text-gray-700">點選出你每天「一定會做」的固定動作，它們將成為你建立新習慣的最佳起點。你也可以在下方**輸入自己的獨特錨點**。</p>
+                
+                <!-- NEW Custom Anchor Input -->
+                <div class="flex flex-col sm:flex-row gap-2 mb-6">
+                    <input type="text" id="new-anchor-input" placeholder="輸入你的固定動作 (例如: 穿上制服)" class="flex-grow p-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 outline-none transition">
+                    <button id="add-anchor-btn" class="btn-teal font-bold py-3 px-6 rounded-lg">新增錨點</button>
+                </div>
+                
+                <div id="a-anchors" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                    <div class="anchor-card p-4 border-2 border-gray-300 rounded-lg text-center cursor-pointer transition hover:border-teal-500 hover:bg-teal-50" data-anchor="早上起床後">☀️ 早上起床後</div>
+                    <div class="anchor-card p-4 border-2 border-gray-300 rounded-lg text-center cursor-pointer transition hover:border-teal-500 hover:bg-teal-50" data-anchor="早上刷牙完">🦷 早上刷牙完</div>
+                    <div class="anchor-card p-4 border-2 border-gray-300 rounded-lg text-center cursor-pointer transition hover:border-teal-500 hover:bg-teal-50" data-anchor="吃完早餐後">🥐 吃完早餐後</div>
+                    <div class="anchor-card p-4 border-2 border-gray-300 rounded-lg text-center cursor-pointer transition hover:border-teal-500 hover:bg-teal-50" data-anchor="通勤上學時">🚌 通勤上學時</div>
+                    <div class="anchor-card p-4 border-2 border-gray-300 rounded-lg text-center cursor-pointer transition hover:border-teal-500 hover:bg-teal-50" data-anchor="吃完午餐後">🍱 吃完午餐後</div>
+                    <div class="anchor-card p-4 border-2 border-gray-300 rounded-lg text-center cursor-pointer transition hover:border-teal-500 hover:bg-teal-50" data-anchor="通勤回家時">🏡 通勤回家時</div>
+                    <div class="anchor-card p-4 border-2 border-gray-300 rounded-lg text-center cursor-pointer transition hover:border-teal-500 hover:bg-teal-50" data-anchor="吃完晚餐後">🍝 吃完晚餐後</div>
+                    <div class="anchor-card p-4 border-2 border-gray-300 rounded-lg text-center cursor-pointer transition hover:border-teal-500 hover:bg-teal-50" data-anchor="晚上洗澡完">🚿 晚上洗澡完</div>
+                    <div class="anchor-card p-4 border-2 border-gray-300 rounded-lg text-center cursor-pointer transition hover:border-teal-500 hover:bg-teal-50" data-anchor="睡前">🌙 睡前</div>
+                </div>
+            </section>
+            
+            <section id="step3" class="bg-white p-8 rounded-xl shadow-md">
+                <div class="flex items-center gap-4 mb-6">
+                    <div class="step-number">3</div>
+                    <h2 class="text-2xl font-bold text-teal-700">設計你的「A → B」習慣鎖鍊</h2>
+                </div>
+                <p class="mb-6 text-gray-700">現在是最好玩的部分！從右邊的「B 習慣清單」中，將你想培養的習慣<span class="font-bold">拖曳</span>到左邊的「A 錨點」上，來建立你的習慣鎖鍊吧！</p>
+                <div class="grid md:grid-cols-2 gap-8">
+                    <div>
+                        <h3 class="font-bold text-lg mb-4 text-center">👇 拖到這裡建立鎖鍊 👇</h3>
+                        <div id="drop-zones-container" class="space-y-4 min-h-[200px] bg-gray-50 p-4 rounded-lg">
+                            <p class="text-center text-gray-500">請先在步驟 2 選擇你的錨點</p>
+                        </div>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-lg mb-4 text-center">👉 從這裡拖曳習慣 👉</h3>
+                        <div id="drag-source-container" class="space-y-4 min-h-[200px] bg-gray-50 p-4 rounded-lg">
+                           <p class="text-center text-gray-500">請先在步驟 1 加入你的習慣</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <section id="result" class="bg-teal-50 p-8 rounded-xl shadow-md">
+                 <h2 class="text-2xl font-bold mb-6 text-teal-700 text-center">🎉 恭喜！這是你的習慣鎖鍊計畫 🎉</h2>
+                 <div id="final-chains" class="space-y-3 max-w-2xl mx-auto">
+                     <p class="text-center text-gray-500">完成的習慣鎖鍊將會顯示在這裡...</p>
+                 </div>
+                 <div class="text-center mt-6">
+                     <button id="reset-btn" class="btn-outline font-bold py-3 px-6 rounded-lg">全部重設</button>
+                 </div>
+            </section>
+
+            <section id="protips" class="bg-white p-8 rounded-xl shadow-md">
+                <h2 class="text-2xl font-bold mb-6 text-teal-700 text-center">實戰技巧：讓習慣更容易成功</h2>
+                <div class="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
+                    <div class="bg-amber-50 p-6 rounded-lg border-l-4 border-amber-400">
+                        <h3 class="font-bold text-lg mb-2 text-amber-800">💡 技巧一：從「超級小」開始</h3>
+                        <p class="text-amber-700">目標是養成習慣，不是挑戰意志力。將動作簡化到 5-15 分鐘內可以完成，會更容易起步。例如：</p>
+                        <ul class="list-disc list-inside mt-2 text-amber-700">
+                            <li>「<span class="font-bold">翻開書</span>」比「讀 10 頁」好</li>
+                            <li>「<span class="font-bold">打開 Podcast</span>」比「聽完一集」好</li>
+                        </ul>
+                        <p class="mt-2 text-sm text-amber-600">只要開始了，大腦就會想：「做都做了，乾脆順便多做一點吧！」</p>
+                    </div>
+                    <div class="bg-sky-50 p-6 rounded-lg border-l-4 border-sky-400">
+                        <h3 class="font-bold text-lg mb-2 text-sky-800">🔋 技巧二：匹配你的精力</h3>
+                        <p class="text-sky-700">在對的時間做對的事，事半功倍！</p>
+                        <ul class="list-disc list-inside mt-2 text-sky-700">
+                           <li><span class="font-bold">高精力時段</span> (如早上) → 做專注思考的事 (解數學題、背單字)</li>
+                           <li><span class="font-bold">低精力時段</span> (如通勤、睡前) → 做輕鬆靜態的事 (聽音樂、寫日記)</li>
+                        </ul>
+                         <p class="mt-2 text-sm text-sky-600">切忌把燒腦的事放在疲憊的時候做！</p>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+        
+        <footer class="text-center mt-16 text-gray-500 text-sm">
+            <p>靈感來源：習慣連鎖法。祝你養成好習慣！</p>
+        </footer>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const newHabitInput = document.getElementById('new-habit-input');
+            const addHabitBtn = document.getElementById('add-habit-btn');
+            const bListContainer = document.getElementById('b-list');
+            const dragSourceContainer = document.getElementById('drag-source-container');
+            const anchorsContainer = document.getElementById('a-anchors');
+            let anchorCards = document.querySelectorAll('.anchor-card');
+            const dropZonesContainer = document.getElementById('drop-zones-container');
+            const finalChainsContainer = document.getElementById('final-chains');
+            const exampleHabitsContainer = document.getElementById('example-habits');
+            const resetBtn = document.getElementById('reset-btn');
+
+            const newAnchorInput = document.getElementById('new-anchor-input');
+            const addAnchorBtn = document.getElementById('add-anchor-btn');
+
+            let habits = [];
+            let selectedAnchors = [];
+            let chains = {};
+
+            const updateAnchorCards = () => {
+                anchorCards = document.querySelectorAll('.anchor-card');
+                anchorCards.forEach(card => {
+                    // Remove existing listener to prevent duplicates
+                    card.removeEventListener('click', handleAnchorClick); 
+                    card.addEventListener('click', handleAnchorClick);
+                });
+            };
+
+            const handleAnchorClick = (e) => {
+                 const card = e.currentTarget;
+                 card.classList.toggle('bg-teal-500');
+                 card.classList.toggle('text-white');
+                 card.classList.toggle('border-teal-500');
+                    
+                 const anchorText = card.dataset.anchor;
+                 if (selectedAnchors.includes(anchorText)) {
+                     selectedAnchors = selectedAnchors.filter(a => a !== anchorText);
+                     delete chains[anchorText];
+                 } else {
+                     selectedAnchors.push(anchorText);
+                 }
+                 renderDropZones();
+            };
+
+            const addCustomAnchor = (anchorText) => {
+                const trimmedAnchor = anchorText.trim();
+                if (trimmedAnchor && !document.querySelector(`[data-anchor="${trimmedAnchor}"]`)) {
+                    const newCard = document.createElement('div');
+                    newCard.classList.add('anchor-card', 'p-4', 'border-2', 'border-gray-300', 'rounded-lg', 'text-center', 'cursor-pointer', 'transition', 'hover:border-teal-500', 'hover:bg-teal-50');
+                    newCard.dataset.anchor = trimmedAnchor;
+                    newCard.textContent = `📍 ${trimmedAnchor}`; 
+                    newCard.addEventListener('click', handleAnchorClick);
+                    
+                    anchorsContainer.prepend(newCard); // Prepend to show new items first
+                    newAnchorInput.value = '';
+                    updateAnchorCards(); 
+                }
+            };
+            
+            addAnchorBtn.addEventListener('click', () => {
+                addCustomAnchor(newAnchorInput.value);
+            });
+
+            newAnchorInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    addCustomAnchor(newAnchorInput.value);
+                }
+            });
+
+
+            const renderBList = () => {
+                const containers = [bListContainer, dragSourceContainer];
+                containers.forEach(container => {
+                    container.innerHTML = '';
+                });
+
+                if (habits.length === 0) {
+                    bListContainer.innerHTML = '';
+                    dragSourceContainer.innerHTML = '<p class="text-center text-gray-500">請先在步驟 1 加入你的習慣</p>';
+                } else {
+                     habits.forEach((habit, index) => {
+                        const habitEl = document.createElement('div');
+                        habitEl.classList.add('habit-card', 'bg-teal-100', 'text-teal-800', 'p-2', 'rounded-lg', 'text-center', 'font-medium', 'break-all');
+                        habitEl.setAttribute('draggable', 'true');
+                        habitEl.dataset.habit = habit;
+                        habitEl.textContent = habit;
+                        
+                        const habitElClone = habitEl.cloneNode(true);
+
+                        habitEl.addEventListener('dragstart', (e) => {
+                           e.dataTransfer.setData('text/plain', habit);
+                           setTimeout(() => { e.target.style.opacity = '0.5'; }, 0);
+                        });
+                        habitEl.addEventListener('dragend', (e) => {
+                           e.target.style.opacity = '1';
+                        });
+
+                        habitElClone.addEventListener('dragstart', (e) => {
+                           e.dataTransfer.setData('text/plain', habit);
+                           setTimeout(() => { e.target.style.opacity = '0.5'; }, 0);
+                        });
+                        habitElClone.addEventListener('dragend', (e) => {
+                           e.target.style.opacity = '1';
+                        });
+
+                        bListContainer.appendChild(habitEl);
+                        dragSourceContainer.appendChild(habitElClone);
+                    });
+                }
+            };
+
+            const addHabit = (habitText) => {
+                const trimmedHabit = habitText.trim();
+                if (trimmedHabit && !habits.includes(trimmedHabit)) {
+                    habits.push(trimmedHabit);
+                    renderBList();
+                }
+            };
+            
+            addHabitBtn.addEventListener('click', () => {
+                addHabit(newHabitInput.value);
+                newHabitInput.value = '';
+            });
+
+            newHabitInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    addHabit(newHabitInput.value);
+                    newHabitInput.value = '';
+                }
+            });
+
+            exampleHabitsContainer.addEventListener('click', (e) => {
+                if (e.target.tagName === 'BUTTON') {
+                    addHabit(e.target.textContent);
+                }
+            });
+
+            const renderDropZones = () => {
+                dropZonesContainer.innerHTML = '';
+                 if (selectedAnchors.length === 0) {
+                     dropZonesContainer.innerHTML = '<p class="text-center text-gray-500">請先在步驟 2 選擇你的錨點</p>';
+                 } else {
+                    selectedAnchors.forEach(anchor => {
+                        const zone = document.createElement('div');
+                        zone.classList.add('drop-zone', 'p-4', 'border-2', 'border-gray-300', 'rounded-lg', 'min-h-[60px]');
+                        zone.dataset.anchor = anchor;
+                        
+                        const anchorText = document.createElement('p');
+                        anchorText.textContent = `${anchor} →`;
+                        anchorText.classList.add('font-bold', 'text-gray-700');
+                        zone.appendChild(anchorText);
+
+                        zone.addEventListener('dragover', (e) => {
+                            e.preventDefault();
+                            zone.classList.add('drag-over');
+                        });
+                        zone.addEventListener('dragleave', () => {
+                            zone.classList.remove('drag-over');
+                        });
+                        zone.addEventListener('drop', (e) => {
+                            e.preventDefault();
+                            zone.classList.remove('drag-over');
+                            const habit = e.dataTransfer.getData('text/plain');
+                            if (!chains[anchor]) {
+                                chains[anchor] = [];
+                            }
+                            // Prevent adding the same habit multiple times to the same anchor
+                            if (!chains[anchor].includes(habit)) {
+                                chains[anchor].push(habit);
+                            }
+                            renderFinalChains();
+                        });
+
+                        dropZonesContainer.appendChild(zone);
+                    });
+                 }
+                renderFinalChains();
+            };
+
+            const renderFinalChains = () => {
+                finalChainsContainer.innerHTML = '';
+                let hasChains = false;
+                Object.keys(chains).forEach(anchor => {
+                    if (chains[anchor] && chains[anchor].length > 0) {
+                        hasChains = true;
+                        const chainGroup = document.createElement('div');
+                        chainGroup.classList.add('bg-white', 'p-4', 'rounded-lg', 'shadow-sm');
+
+                        const anchorTitle = document.createElement('p');
+                        anchorTitle.classList.add('font-bold', 'text-teal-700', 'text-lg');
+                        anchorTitle.textContent = `${anchor} →`;
+                        chainGroup.appendChild(anchorTitle);
+
+                        const habitList = document.createElement('ul');
+                        habitList.classList.add('list-none', 'pl-4', 'mt-2', 'space-y-1');
+                        chains[anchor].forEach(habit => {
+                             const li = document.createElement('li');
+                             li.classList.add('text-gray-800', 'p-2', 'bg-teal-100', 'rounded', 'relative');
+                             li.textContent = habit;
+                             
+                             // Add a remove button for habits in the final chain
+                             const removeBtn = document.createElement('button');
+                             removeBtn.textContent = '✖';
+                             removeBtn.classList.add('absolute', 'top-1', 'right-2', 'text-red-500', 'hover:text-red-700', 'text-xs', 'font-bold');
+                             removeBtn.onclick = () => {
+                                chains[anchor] = chains[anchor].filter(h => h !== habit);
+                                renderFinalChains();
+                                renderDropZones(); // Re-render to update the visual drop zone if needed
+                             };
+                             li.appendChild(removeBtn);
+
+                             habitList.appendChild(li);
+                        });
+                        chainGroup.appendChild(habitList);
+                        finalChainsContainer.appendChild(chainGroup);
+                    }
+                });
+
+                if (!hasChains) {
+                    finalChainsContainer.innerHTML = '<p class="text-center text-gray-500">完成的習慣鎖鍊將會顯示在這裡...</p>';
+                }
+            };
+            
+            // Initial setup for static anchor cards
+            updateAnchorCards();
+
+            resetBtn.addEventListener('click', () => {
+                habits = [];
+                selectedAnchors = [];
+                chains = {};
+
+                newHabitInput.value = '';
+                newAnchorInput.value = '';
+
+                anchorCards.forEach(card => {
+                    card.classList.remove('bg-teal-500', 'text-white', 'border-teal-500');
+                });
+                
+                // Remove custom anchors from DOM
+                document.querySelectorAll('.anchor-card[data-anchor]').forEach(card => {
+                     const isDefault = ["早上起床後", "早上刷牙完", "吃完早餐後", "通勤上學時", "吃完午餐後", "通勤回家時", "吃完晚餐後", "晚上洗澡完", "睡前"].includes(card.dataset.anchor);
+                     if (!isDefault) {
+                         card.remove();
+                     }
+                });
+                
+                renderBList();
+                renderDropZones();
+                renderFinalChains();
+                updateAnchorCards();
+            });
+
+            renderBList();
+            renderDropZones();
+            renderFinalChains();
+        });
+    </script>
+</body>
+</html>
